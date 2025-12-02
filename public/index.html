@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>랜덤 퀴즈</title>
+</head>
+<body>
+  <h1>랜덤 퀴즈 테스트</h1>
+
+  <div id="question-box">
+    <p id="question-text">문제를 불러오는 중입니다...</p>
+  </div>
+
+  <input type="text" id="answer" placeholder="정답을 입력하세요">
+  <button id="submit-btn">제출</button>
+  <button id="reload-btn">다른 문제 받기</button>
+
+  <h2 id="result"></h2>
+
+  <script>
+    let currentQuestionId = null;
+
+    // ─────────────────────────────
+    // 1) 랜덤 문제 불러오기
+    // ─────────────────────────────
+    function loadQuestion() {
+      fetch("/api/question")
+        .then(res => res.json())
+        .then(data => {
+          currentQuestionId = data.id;
+          document.getElementById("question-text").innerText = data.question;
+          document.getElementById("answer").value = "";
+          document.getElementById("result").innerText = "";
+        })
+        .catch(() => {
+          document.getElementById("question-text").innerText = "문제를 불러오는 데 문제가 발생했습니다.";
+        });
+    }
+
+    // ─────────────────────────────
+    // 2) 정답 제출
+    // ─────────────────────────────
+    function submitAnswer() {
+      const userAnswer = document.getElementById("answer").value;
+
+      if (!currentQuestionId) {
+        document.getElementById("result").innerText = "먼저 문제를 불러와 주세요.";
+        return;
+      }
+
+      fetch("/api/check-answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          questionId: currentQuestionId,
+          answer: userAnswer
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const resultTag = document.getElementById("result");
+
+        if (data.correct) {
+          resultTag.style.color = "green";
+        } else {
+          resultTag.style.color = "red";
+        }
+        resultTag.innerText = data.feedback;
+      })
+      .catch(() => {
+        document.getElementById("result").innerText = "채점 중 오류가 발생했습니다.";
+      });
+    }
+
+    // 버튼에 이벤트 연결
+    document.getElementById("submit-btn").addEventListener("click", submitAnswer);
+    document.getElementById("reload-btn").addEventListener("click", loadQuestion);
+
+    // 페이지 처음 열릴 때 자동으로 문제 1개 불러오기
+    window.onload = loadQuestion;
+  </script>
+</body>
+</html>
